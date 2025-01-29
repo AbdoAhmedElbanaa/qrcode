@@ -1,37 +1,50 @@
 <!DOCTYPE html>
 <html lang="ar">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ماسح QR</title>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-</head>
-<body>
-    <div id="reader"></div>
-    <p>نتيجة المسح: <span id="result"></span></p>
 
-    <script>
-        // الدالة التي يتم استدعاؤها عند نجاح المسح
-        function onScanSuccess(decodedText, decodedResult) {
-            document.getElementById('result').innerText = decodedText; // عرض النتيجة
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>قارئ QR</title>
+        <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    </head>
 
-            // إرسال النتيجة إلى الصفحة الأصلية عبر postMessage
-            window.opener.postMessage(decodedText, '*'); // إرسال البيانات إلى الصفحة الأصلية
-            window.close(); // إغلاق النافذة المنبثقة بعد إرسال النتيجة
-        }
+    <body>
+        <div id="scanner"></div>
+        <script>
+            let scanner;
+            let isFrontCamera = false; // يمكن تغيير القيمة إلى true لاستخدام الكاميرا الأمامية
 
-        // الدالة التي يتم استدعاؤها عند فشل المسح
-        function onScanFailure(error) {
-            console.warn(`خطأ في المسح: ${error}`);
-        }
+            async function startScanner() {
+                scanner = new Html5Qrcode("scanner");
+                try {
+                    await scanner.start(
+                        { facingMode: isFrontCamera ? "user" : "environment" }, // تحديد الكاميرا الأمامية أو الخلفية
+                        {
+                            fps: 20,  // عدد الإطارات في الثانية
+                            qrbox: { width: 500, height: 500 }, // حجم مربع القراءة
+                        },
+                        (decodedText) => {
+                            // حفظ النص المقروء في sessionStorage ثم إرساله إلى الصفحة الأصلية
+                            sessionStorage.setItem("scannedText", decodedText);
+                            document.getElementById('qrText').textContent = decodedText; // عرض النص في الحقل
 
-        // إعداد ماسح QR
-        let qrScanner = new Html5QrcodeScanner("reader", {
-            fps: 10,
-            qrbox: { width: 250, height: 250 }
-        });
+                            // إرسال البيانات إلى الموقع الأصلي عبر postMessage
+                            window.opener.postMessage(decodedText, '*'); // إرسال البيانات للصفحة الأصلية
 
-        qrScanner.render(onScanSuccess, onScanFailure);
-    </script>
-</body>
+                            // إغلاق النافذة المنبثقة بعد المسح الناجح
+                            window.close();
+                        },
+                        (errorMessage) => {
+                            console.log("Scanning error:", errorMessage); // التعامل مع أخطاء المسح
+                        }
+                    );
+                } catch (err) {
+                    console.error("Error starting the QR scanner:", err); // التعامل مع الأخطاء في بدء الماسح
+                }
+            }
+            // فتح النافذة المنبثقة عند بدء المسح
+            window.onload = startScanner;
+        </script>
+    </body>
+
 </html>
