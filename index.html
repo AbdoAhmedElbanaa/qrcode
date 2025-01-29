@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ماسح QR</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <div id="reader"></div>
+    <p>نتيجة المسح: <span id="result"></span></p>
+
+    <script>
+        function onScanSuccess(decodedText, decodedResult) {
+            document.getElementById('result').innerText = decodedText; // عرض النتيجة
+        }
+
+        function onScanFailure(error) {
+            console.warn(`خطأ في المسح: ${error}`);
+        }
+
+        let qrScanner = new Html5QrcodeScanner("reader", {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
+        });
+
+        qrScanner.render(onScanSuccess, onScanFailure);
+    </script>
+</body>
+</html>
