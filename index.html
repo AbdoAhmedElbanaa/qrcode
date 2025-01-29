@@ -11,14 +11,21 @@
     <p>نتيجة المسح: <span id="result"></span></p>
 
     <script>
+        // الدالة التي يتم استدعاؤها عند نجاح المسح
         function onScanSuccess(decodedText, decodedResult) {
             document.getElementById('result').innerText = decodedText; // عرض النتيجة
+
+            // إرسال النتيجة إلى الصفحة الأصلية عبر postMessage
+            window.opener.postMessage(decodedText, '*'); // إرسال البيانات إلى الصفحة الأصلية
+            window.close(); // إغلاق النافذة المنبثقة بعد إرسال النتيجة
         }
 
+        // الدالة التي يتم استدعاؤها عند فشل المسح
         function onScanFailure(error) {
             console.warn(`خطأ في المسح: ${error}`);
         }
 
+        // إعداد ماسح QR
         let qrScanner = new Html5QrcodeScanner("reader", {
             fps: 10,
             qrbox: { width: 250, height: 250 }
