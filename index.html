@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ar">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ماسح QR</title>
+        <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    </head>
+
+    <body>
+        <p style="background: red; color:#fff;">الرجاء فتح المتصفح لتشغيل الـ QR</p>
+        <div id="reader" style="display: none;"></div>
+        <p style="display: none;">نتيجة المسح: <span id="result" style="display: none;"></span></p>
+
+        <script>
+            // طلب إذن الكاميرا تلقائيًا عند تحميل الصفحة
+            window.onload = function () {
+                // محاولة الوصول إلى الكاميرا
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function (stream) {
+                        // إذا تم منح الإذن، إيقاف الكاميرا المؤقتة لتجنب تعارض
+                        stream.getTracks().forEach(track => track.stop());
+
+                        // التأكد من أن الكاميرا تعمل على الأجهزة القديمة
+                        startQrScanner();
+                    })
+                    .catch(function (error) {
+                        alert("تم رفض إذن الكاميرا! الرجاء السماح بالوصول إلى الكاميرا من إعدادات المتصفح.");
+                        console.error("خطأ في إذن الكاميرا:", error);
+                    });
+            };
+
+            function startQrScanner() {
+                // التأكد من أن الماسح يظهر بشكل صحيح
+                document.getElementById("reader").style.display = "block";
+
+                // ضبط الماسح ليعمل بشكل متوافق
+                let qrScanner = new Html5QrcodeScanner("reader", {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    videoConstraints: {
+                        facingMode: "environment",  // التأكد من استخدام كاميرا الخلفية
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+
+                // بدء المسح
+                qrScanner.render(onScanSuccess, onScanFailure);
+            }
+
+            function onScanSuccess(decodedText, decodedResult) {
+                // عرض النتيجة
+                document.getElementById('result').innerText = decodedText;
+                window.opener.postMessage(decodedText, '*'); // إرسال البيانات إلى الصفحة الأصلية
+                window.close(); // إغلاق النافذة المنبثقة بعد إرسال النتيجة
+                // إرسال النتيجة إلى الصفحة الأصلية عبر postMessage
+                if (window.opener) {
+                    window.opener.postMessage(decodedText, '*');
+                }
+                window.close(); // إغلاق النافذة بعد نجاح المسح
+            }
+
+            function onScanFailure(error) {
+                console.warn("خطأ في المسح:", error);
+            }
+        </script>
+    </body>
+
+</html>
