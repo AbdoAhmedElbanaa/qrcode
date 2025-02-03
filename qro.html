@@ -5,77 +5,63 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ماسح QR</title>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
-        #reader { width: 100%; max-width: 400px; margin: auto; }
-        #error-message { color: red; font-size: 18px; display: none; }
-    </style>
 </head>
 <body>
-
-    <p id="error-message">الرجاء فتح المتصفح الصحيح أو السماح للكاميرا لتشغيل الـ QR</p>
-    <div id="reader"></div>
-    <p id="result-container" style="display:none">نتيجة المسح: <span id="result"></span></p>
+    <p style="background: red; color:#fff;">الرجاء فتح المتصفح لتشغيل الـ QR</p>
+    <div id="reader" style="display: none;"></div>
+    <p style="display: none;">نتيجة المسح: <span id="result" style="display: none;"></span></p>
 
     <script>
-        // ✅ التحقق من إذن الكاميرا قبل تشغيلها
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            document.getElementById('error-message').style.display = 'block';
-            document.getElementById('error-message').innerText = "جهازك لا يدعم تشغيل الكاميرا. يرجى تحديث المتصفح.";
-        } else {
-            // ✅ التأكد أن الموقع يعمل عبر HTTPS
-            if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-                alert("⚠ يجب تشغيل هذا الموقع عبر HTTPS لكي تعمل الكاميرا.");
-            }
+        // طلب إذن الكاميرا تلقائيًا عند تحميل الصفحة
+        window.onload = function () {
+            // محاولة الوصول إلى الكاميرا
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function (stream) {
+                    // إذا تم منح الإذن، إيقاف الكاميرا المؤقتة لتجنب تعارض
+                    stream.getTracks().forEach(track => track.stop());
 
-            // ✅ البحث عن الكاميرا الخلفية تلقائيًا
-            Html5Qrcode.getCameras().then(devices => {
-                if (devices.length === 0) {
-                    document.getElementById('error-message').style.display = 'block';
-                    document.getElementById('error-message').innerText = "لم يتم العثور على كاميرا متاحة.";
-                    return;
+                    // التأكد من أن الكاميرا تعمل على الأجهزة القديمة
+                    startQrScanner();
+                })
+                .catch(function (error) {
+                    alert("تم رفض إذن الكاميرا! الرجاء السماح بالوصول إلى الكاميرا من إعدادات المتصفح.");
+                    console.error("خطأ في إذن الكاميرا:", error);
+                });
+        };
+
+        function startQrScanner() {
+            // التأكد من أن الماسح يظهر بشكل صحيح
+            document.getElementById("reader").style.display = "block"; 
+
+            // ضبط الماسح ليعمل بشكل متوافق
+            let qrScanner = new Html5QrcodeScanner("reader", {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                videoConstraints: {
+                    facingMode: "environment",  // التأكد من استخدام كاميرا الخلفية
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
                 }
-
-                let backCamera = devices.find(device => device.label.toLowerCase().includes("back"));
-                let cameraId = backCamera ? backCamera.id : devices[0].id; // اختيار الكاميرا الخلفية أو الأولى المتاحة
-
-                // ✅ تشغيل ماسح QR بالكاميرا المحددة
-                let qrScanner = new Html5Qrcode(cameraId);
-                qrScanner.start(
-                    cameraId,
-                    {
-                        fps: 10,
-                        qrbox: { width: 300, height: 300 } // زيادة حجم المسح لحل مشاكل الهواتف
-                    },
-                    onScanSuccess,
-                    onScanFailure
-                );
-            }).catch(err => {
-                document.getElementById('error-message').style.display = 'block';
-                document.getElementById('error-message').innerText = "خطأ في الوصول إلى الكاميرا: " + err;
             });
+
+            // بدء المسح
+            qrScanner.render(onScanSuccess, onScanFailure);
         }
 
-        // ✅ الدالة التي يتم استدعاؤها عند نجاح المسح
         function onScanSuccess(decodedText, decodedResult) {
-            document.getElementById('result').innerText = decodedText; // عرض النتيجة
-            document.getElementById('result-container').style.display = "block";
+            // عرض النتيجة
+            document.getElementById('result').innerText = decodedText;
 
             // إرسال النتيجة إلى الصفحة الأصلية عبر postMessage
             if (window.opener) {
                 window.opener.postMessage(decodedText, '*');
             }
-
-            setTimeout(() => {
-                window.close(); // إغلاق النافذة بعد 3 ثوانٍ
-            }, 3000);
+            window.close(); // إغلاق النافذة بعد نجاح المسح
         }
 
-        // ✅ الدالة التي يتم استدعاؤها عند فشل المسح
         function onScanFailure(error) {
-            console.warn(`خطأ في المسح: ${error}`);
+            console.warn("خطأ في المسح:", error);
         }
     </script>
-
 </body>
 </html>
